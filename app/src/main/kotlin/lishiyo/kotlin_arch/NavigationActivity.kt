@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package lishiyo.kotlin_arch.view
+package lishiyo.kotlin_arch
 
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
 import android.view.MenuItem
-import lishiyo.kotlin_arch.R
 import kotlinx.android.synthetic.main.activity_main.*
+import lishiyo.kotlin_arch.view.AboutFragment
+import lishiyo.kotlin_arch.view.CurrencyFragment
 
 
 class NavigationActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {

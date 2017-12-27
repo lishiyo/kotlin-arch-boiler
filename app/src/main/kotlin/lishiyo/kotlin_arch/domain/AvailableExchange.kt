@@ -18,5 +18,6 @@ package lishiyo.kotlin_arch.domain
 
 import java.io.Serializable
 
+// Domain model for the CurrencyRepository
 data class AvailableExchange(var availableExchangesMap: Map<String, Double>): Serializable
 

@@ -16,5 +16,6 @@
 
 package lishiyo.kotlin_arch.domain
 
+// Domain model for Currency
 data class Currency(var code: String, var country: String)
 

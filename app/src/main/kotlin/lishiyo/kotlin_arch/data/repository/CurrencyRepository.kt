@@ -18,15 +18,15 @@ package lishiyo.kotlin_arch.data.repository
 
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.Disposable
+import io.reactivex.schedulers.Schedulers
 import lishiyo.kotlin_arch.data.remote.CurrencyResponse
 import lishiyo.kotlin_arch.data.remote.RemoteCurrencyDataSource
 import lishiyo.kotlin_arch.data.room.CurrencyEntity
 import lishiyo.kotlin_arch.data.room.RoomCurrencyDataSource
 import lishiyo.kotlin_arch.domain.AvailableExchange
 import lishiyo.kotlin_arch.domain.Currency
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,6 +44,7 @@ class CurrencyRepository @Inject constructor(
   override fun getTotalCurrencies() = roomCurrencyDataSource.currencyDao().getCurrenciesTotal()
 
   override fun addCurrencies() {
+    // populate with seed data
     val currencyEntityList = RoomCurrencyDataSource.getAllCurrencies()
     roomCurrencyDataSource.currencyDao().insertAll(currencyEntityList)
   }
@@ -55,12 +56,15 @@ class CurrencyRepository @Inject constructor(
         .subscribeOn(Schedulers.io())
         .observeOn(AndroidSchedulers.mainThread())
         .subscribe({ currencyList ->
+          // map the entities to domain models => trigger on viewmodel's liveCurrencyData
           mutableLiveData.value = transform(currencyList)
         }, { t: Throwable? -> t!!.printStackTrace() })
     allCompositeDisposable.add(disposable)
+
     return mutableLiveData
   }
 
+  // Map currency entities from database into domain model currencies
   private fun transform(currencies: List<CurrencyEntity>): List<Currency> {
     val currencyList = ArrayList<Currency>()
     currencies.forEach {
@@ -69,6 +73,7 @@ class CurrencyRepository @Inject constructor(
     return currencyList
   }
 
+  // currencies of the form "AED,USD"
   override fun getAvailableExchange(currencies: String): LiveData<AvailableExchange> {
     val mutableLiveData = MutableLiveData<AvailableExchange>()
     val disposable = remoteCurrencyDataSource.requestAvailableExchange(currencies)
@@ -85,6 +90,7 @@ class CurrencyRepository @Inject constructor(
     return mutableLiveData
   }
 
+  // map CurrencyResponse to domain model
   private fun transform(exchangeMap: CurrencyResponse): AvailableExchange {
     return AvailableExchange(exchangeMap.currencyQuotes)
   }

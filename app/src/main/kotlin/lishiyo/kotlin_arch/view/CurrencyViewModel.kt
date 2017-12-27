@@ -16,102 +16,130 @@
 
 package lishiyo.kotlin_arch.view
 
-import android.arch.lifecycle.*
 import android.arch.lifecycle.Lifecycle.Event.ON_DESTROY
+import android.arch.lifecycle.LifecycleObserver
+import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.OnLifecycleEvent
+import android.arch.lifecycle.ViewModel
 import android.util.Log
-import lishiyo.kotlin_arch.data.repository.CurrencyRepository
-import lishiyo.kotlin_arch.di.CurrencyApplication
-import lishiyo.kotlin_arch.domain.AvailableExchange
-import lishiyo.kotlin_arch.domain.Currency
 import io.reactivex.Completable
 import io.reactivex.CompletableObserver
+import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.annotations.NonNull
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import io.reactivex.subjects.PublishSubject
+import lishiyo.kotlin_arch.data.repository.CurrencyRepository
+import lishiyo.kotlin_arch.di.CurrencyApplication
+import lishiyo.kotlin_arch.domain.AvailableExchange
+import lishiyo.kotlin_arch.domain.Currency
+import lishiyo.kotlin_arch.mvibase.MviViewModel
 import javax.inject.Inject
 
-class CurrencyViewModel : ViewModel(), LifecycleObserver {
+class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyIntent, CurrencyViewState> {
+    // Dagger
+    @Inject lateinit var currencyRepository: CurrencyRepository
 
-  @Inject lateinit var currencyRepository: CurrencyRepository
+    private val compositeDisposable = CompositeDisposable()
 
-  private val compositeDisposable = CompositeDisposable()
-  private var liveCurrencyData: LiveData<List<Currency>>? = null
-  private var liveAvailableExchange: LiveData<AvailableExchange>? = null
-
-  init {
-    initializeDagger()
-  }
-
-
-  fun getAvailableExchange(currencies: String): LiveData<AvailableExchange>? {
-    liveAvailableExchange = null
-    liveAvailableExchange = MutableLiveData<AvailableExchange>()
-    liveAvailableExchange = currencyRepository.getAvailableExchange(currencies)
-    return liveAvailableExchange
-  }
-
-  fun loadCurrencyList(): LiveData<List<Currency>>? {
-    if (liveCurrencyData == null) {
-      liveCurrencyData = MutableLiveData<List<Currency>>()
-      liveCurrencyData = currencyRepository.getCurrencyList()
+    // LiveData-wrapped list of currencies
+    private val liveCurrencyData: LiveData<List<Currency>> by lazy {
+        currencyRepository.getCurrencyList() // called one-time
     }
-    return liveCurrencyData
-  }
+    // LiveData-wrapped exchange model
+    private lateinit var liveAvailableExchange: LiveData<AvailableExchange>
 
-  fun initLocalCurrencies() {
-    val disposable = currencyRepository.getTotalCurrencies()
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe {
-          if (isRoomEmpty(it)) {
-            populate()
-          } else {
-            Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been already Populated")
-          }
+    // LiveData-wrapped current ViewState
+    private lateinit var liveViewState: LiveData<CurrencyViewState>
+
+    // subject to publish currency view states
+    private val intentsSubject : PublishSubject<CurrencyIntent> by lazy { PublishSubject.create<CurrencyIntent>() }
+
+    init {
+        // inject repo, actionprocessor
+        initializeDagger()
+
+        // create states live data
+    }
+
+    override fun processIntents(intents: Observable<out CurrencyIntent>) {
+       intents.subscribe(intentsSubject)
+    }
+
+    override fun states(): LiveData<CurrencyViewState> {
+       return liveViewState
+    }
+
+
+    fun getAvailableExchange(currencyFrom: String, currencyTo: String): LiveData<AvailableExchange>? {
+//    liveAvailableExchange = MutableLiveData<AvailableExchange>()
+        val currencies = currencyFrom + "," + currencyTo
+        liveAvailableExchange = currencyRepository.getAvailableExchange(currencies)
+        return liveAvailableExchange
+    }
+
+    fun loadCurrencyList(): LiveData<List<Currency>>? {
+//    if (liveCurrencyData == null) {
+//      liveCurrencyData = MutableLiveData<List<Currency>>()
+//      liveCurrencyData = currencyRepository.getCurrencyList()
+//    }
+        return liveCurrencyData
+    }
+
+    fun initLocalCurrencies() { // TODO Load intent
+        // seed room db if necessary
+        val disposable = currencyRepository.getTotalCurrencies()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe {
+                    if (isRoomEmpty(it)) {
+                        populate() // populate with seed data
+                    } else {
+                        Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been already Populated")
+                    }
+                }
+        compositeDisposable.add(disposable)
+    }
+
+    @OnLifecycleEvent(ON_DESTROY)
+    fun unSubscribeViewModel() {
+        for (disposable in currencyRepository.allCompositeDisposable) {
+            compositeDisposable.addAll(disposable)
         }
-    compositeDisposable.add(disposable)
-  }
-
-  @OnLifecycleEvent(ON_DESTROY)
-  fun unSubscribeViewModel() {
-    for (disposable in currencyRepository.allCompositeDisposable) {
-      compositeDisposable.addAll(disposable)
+        compositeDisposable.clear()
     }
-    compositeDisposable.clear()
-  }
 
-  private fun isRoomEmpty(currenciesTotal: Int) = currenciesTotal == 0
+    private fun isRoomEmpty(currenciesTotal: Int) = currenciesTotal == 0
 
-  private fun populate() {
-    Completable.fromAction { currencyRepository.addCurrencies() }
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe(object : CompletableObserver {
-          override fun onSubscribe(@NonNull d: Disposable) {
-            compositeDisposable.add(d)
-          }
+    private fun populate() {
+        Completable.fromAction { currencyRepository.addCurrencies() }
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(object : CompletableObserver {
+                    override fun onSubscribe(@NonNull d: Disposable) {
+                        compositeDisposable.add(d)
+                    }
 
-          override fun onComplete() {
-            Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been Populated")
+                    override fun onComplete() {
+                        Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been Populated")
 
-          }
+                    }
 
-          override fun onError(@NonNull e: Throwable) {
-            e.printStackTrace()
-            Log.e(CurrencyRepository::class.java.simpleName, "DataSource hasn't been Populated")
-          }
-        })
-  }
+                    override fun onError(@NonNull e: Throwable) {
+                        e.printStackTrace()
+                        Log.e(CurrencyRepository::class.java.simpleName, "DataSource hasn't been Populated")
+                    }
+                })
+    }
 
-  override fun onCleared() {
-    unSubscribeViewModel()
-    super.onCleared()
-  }
+    override fun onCleared() {
+        unSubscribeViewModel()
+        super.onCleared()
+    }
 
-
-  private fun initializeDagger() = CurrencyApplication.appComponent.inject(this)
+    private fun initializeDagger() = CurrencyApplication.appComponent.inject(this)
 
 }
 

@@ -22,6 +22,7 @@ import android.os.Build
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.app.AlertDialog
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -29,26 +30,43 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
-import lishiyo.kotlin_arch.R
+import io.reactivex.Observable
+import io.reactivex.subjects.PublishSubject
 import kotlinx.android.synthetic.main.currency_fragment.*
+import lishiyo.kotlin_arch.R
+import lishiyo.kotlin_arch.mvibase.MviView
 
 
-class CurrencyFragment : Fragment() {
-
-  companion object {
-    fun newInstance() = CurrencyFragment()
-  }
+class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> {
 
   private val currencies = ArrayList<String>()
   private var currenciesAdapter: ArrayAdapter<String>? = null
   private var currencyFrom: String? = null
   private var currencyTo: String? = null
 
-  private var currencyViewModel: CurrencyViewModel? = null
+  private lateinit var currencyViewModel: CurrencyViewModel
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    initViewModel()
+  private val mConvertPublisher = PublishSubject.create<CurrencyIntent.Convert>()
+  private val mLoadCurrenciesPublisher = PublishSubject.create<CurrencyIntent.LoadCurrencies>()
+  private val mRefreshPublisher = PublishSubject.create<CurrencyIntent.Refresh>()
+
+  // Stream of ALL intents that should push to ViewModel
+  override fun intents(): Observable<out CurrencyIntent> {
+    return Observable.merge(
+            Observable.just(CurrencyIntent.Initial.create()), // send out initial emission
+            mLoadCurrenciesPublisher,
+            mConvertPublisher,
+            mRefreshPublisher
+    )
+  }
+
+  override fun render(state: CurrencyViewState) {
+    // render based on the current view state
+
+  }
+
+  companion object {
+    fun newInstance() = CurrencyFragment()
   }
 
   override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -57,31 +75,44 @@ class CurrencyFragment : Fragment() {
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
-    initUI()
-    populateSpinnerAdapter()
+
+    initViewModel()  // sends off INIT intent
+
+    initSpinners()
+    initConvertButton()
+
+//    populateSpinnerAdapter()
+    mLoadCurrenciesPublisher.onNext(CurrencyIntent.LoadCurrencies.create())
   }
 
   private fun initViewModel() {
     currencyViewModel = ViewModelProviders.of(this).get(CurrencyViewModel::class.java)
-    // add viewmodel as an observer of this fragment lifecycle
-    currencyViewModel?.let { lifecycle.addObserver(it) }
-    currencyViewModel?.initLocalCurrencies()
-  }
 
-  private fun initUI() {
-    initSpinners()
-    initConvertButton()
+    // add viewmodel as an observer of this fragment lifecycle
+    currencyViewModel.let { lifecycle.addObserver(it) }
+
+    // Subscribe to the viewmodel states with LiveData, not Rx
+    currencyViewModel.states().observe(this, Observer { state ->
+      Log.i("connie", "CurrencyFrag ++ got new state! rendering")
+      state?.let {
+        this.render(state)
+      }
+    })
+
+    // Bind ViewModel to intents stream - will send off INIT intent to seed the db
+    currencyViewModel.processIntents(intents())
+
+//    currencyViewModel.initLocalCurrencies()
   }
 
   private fun populateSpinnerAdapter() {
-    currencyViewModel?.loadCurrencyList()?.observe(this, Observer { currencyList ->
-      currencyList!!.forEach {
-        currencies.add(it.code + "  " + it.country)
-      }
-      currenciesAdapter!!.setDropDownViewResource(R.layout.item_spinner);
-      currenciesAdapter!!.notifyDataSetChanged()
-    })
-
+//    currencyViewModel?.loadCurrencyList()?.observe(this, Observer { currencyList ->
+//      currencyList!!.forEach {
+//        currencies.add(it.code + "  " + it.country)
+//      }
+//      currenciesAdapter!!.setDropDownViewResource(R.layout.item_spinner)
+//      currenciesAdapter!!.notifyDataSetChanged()
+//    })
   }
 
   private fun initSpinners() {
@@ -93,44 +124,48 @@ class CurrencyFragment : Fragment() {
   }
 
   private fun initConvertButton() {
-    convert_button.setOnClickListener { convert() }
+    convert_button.setOnClickListener {
+      convert()
+    }
   }
 
   // You can move all this logic to the view model
-
   private fun convert() {
+    // TODO: this should be an intent
     val quantity = currency_edit.text.toString()
     currencyFrom = getCurrencyCode(from_currency_spinner.selectedItem.toString())
     currencyTo = getCurrencyCode(to_currency_spinner.selectedItem.toString())
-    val currencies = currencyFrom + "," + currencyTo
+//    val currencies = currencyFrom + "," + currencyTo
 
     if (quantity.isNotEmpty() && currencyFrom != currencyTo) {
-      currencyViewModel?.getAvailableExchange(currencies)?.observe(this, Observer { availableExchange ->
-        exchange(quantity.toDouble(), availableExchange!!.availableExchangesMap)
-      })
-
+//      currencyViewModel
+//              ?.getAvailableExchange(currencies)
+//              ?.observe(this, Observer { availableExchange ->
+//                exchange(quantity.toDouble(), availableExchange!!.availableExchangesMap)
+//              })
+      mConvertPublisher.onNext(CurrencyIntent.Convert.create(currencyFrom!!, currencyTo!!))
     } else {
       Toast.makeText(activity, "Could not convert.", Toast.LENGTH_SHORT).show()
     }
   }
 
-  private fun exchange(quantity: Double, availableExchangesMap: Map<String, Double>) {
-    val exchangesKeys = availableExchangesMap.keys.toList()
-    val exchangesValues = availableExchangesMap.values.toList()
-
-    val fromCurrency = exchangesValues[0]
-    val toCurrency = exchangesValues[1]
-
-    val fromCurrencyKey = getCurrencyCodeResult(exchangesKeys[0])
-    val toCurrencyKey = getCurrencyCodeResult(exchangesKeys[1])
-
-    val usdExchange = quantity.div(fromCurrency)
-    val exchangeResult = usdExchange.times(toCurrency)
-
-    val result = quantity.toString() + " " + fromCurrencyKey + " = " + exchangeResult.format(4) + " " + toCurrencyKey
-    showResult(result)
-
-  }
+//  private fun exchange(quantity: Double, availableExchangesMap: Map<String, Double>) {
+//    val exchangesKeys = availableExchangesMap.keys.toList()
+//    val exchangesValues = availableExchangesMap.values.toList()
+//
+//    val fromCurrency = exchangesValues[0]
+//    val toCurrency = exchangesValues[1]
+//
+//    val fromCurrencyKey = getCurrencyCodeResult(exchangesKeys[0])
+//    val toCurrencyKey = getCurrencyCodeResult(exchangesKeys[1])
+//
+//    // process quantity /
+//    val usdExchange = quantity.div(fromCurrency)
+//    val exchangeResult = usdExchange.times(toCurrency)
+//
+//    val result = quantity.toString() + " " + fromCurrencyKey + " = " + exchangeResult.format(4) + " " + toCurrencyKey
+//    showResult(result)
+//  }
 
   private fun showResult(result: String) {
     val builder: AlertDialog.Builder

@@ -19,6 +19,10 @@ package lishiyo.kotlin_arch.di
 import android.content.Context
 import dagger.Module
 import dagger.Provides
+import lishiyo.kotlin_arch.data.repository.CurrencyRepository
+import lishiyo.kotlin_arch.domain.CurrencyActionProcessor
+import lishiyo.kotlin_arch.utils.schedulers.BaseSchedulerProvider
+import lishiyo.kotlin_arch.utils.schedulers.SchedulerProvider
 import javax.inject.Singleton
 
 @Module
@@ -26,6 +30,10 @@ class AppModule(private val currencyApplication: CurrencyApplication) {
 
   @Provides @Singleton fun provideContext(): Context = currencyApplication
 
+  @Provides @Singleton fun provideCurrencyActionProcessor(repo: CurrencyRepository, scheduler: BaseSchedulerProvider)
+          : CurrencyActionProcessor {
+    return CurrencyActionProcessor(repo, SchedulerProvider)
+  }
 }
 
 

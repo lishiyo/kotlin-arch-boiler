@@ -17,11 +17,11 @@
 package lishiyo.kotlin_arch.data.repository
 
 import android.arch.lifecycle.LiveData
+import io.reactivex.Flowable
 import lishiyo.kotlin_arch.domain.AvailableExchange
 import lishiyo.kotlin_arch.domain.Currency
-import io.reactivex.Flowable
 
-
+// Data source for currencies
 interface Repository {
 
   fun getTotalCurrencies(): Flowable<Int>
