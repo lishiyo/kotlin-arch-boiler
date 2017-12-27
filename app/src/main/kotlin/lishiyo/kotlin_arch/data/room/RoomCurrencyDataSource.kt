@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.room
+package lishiyo.kotlin_arch.data.room
 
 import android.arch.persistence.room.Database
 import android.arch.persistence.room.Room

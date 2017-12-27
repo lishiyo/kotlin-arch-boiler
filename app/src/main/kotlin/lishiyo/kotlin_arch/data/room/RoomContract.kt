@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.di
+package lishiyo.kotlin_arch.data.room
 
-import dagger.Component
-import erikjhordanrey.android_kotlin_devises.view.CurrencyViewModel
-import javax.inject.Singleton
+class RoomContract {
 
-@Component(modules = arrayOf(AppModule::class, RoomModule::class, RemoteModule::class))
-@Singleton interface AppComponent {
+  companion object {
 
-  fun inject(currencyViewModel: CurrencyViewModel)
+    const val DATABASE_CURRENCY = "currency.db"
 
+    const val TABLE_CURRENCIES = "currencies"
+
+    private const val SELECT_COUNT = "SELECT COUNT(*) FROM "
+    private const val SELECT_FROM = "SELECT * FROM "
+
+    const val SELECT_CURRENCIES_COUNT = SELECT_COUNT + TABLE_CURRENCIES
+    const val SELECT_CURRENCIES = SELECT_FROM + TABLE_CURRENCIES
+
+  }
 }
-
 

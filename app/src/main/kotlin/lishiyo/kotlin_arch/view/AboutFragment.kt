@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.view
+package lishiyo.kotlin_arch.view
 
 import android.content.Intent
 import android.net.Uri
@@ -23,8 +23,8 @@ import android.support.v4.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import erikjhordanrey.android_kotlin_devises.R
 import kotlinx.android.synthetic.main.about_fragment.*
+import lishiyo.kotlin_arch.R
 
 
 class AboutFragment : Fragment() {

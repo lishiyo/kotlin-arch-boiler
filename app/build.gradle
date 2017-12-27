@@ -5,9 +5,9 @@ apply plugin: 'kotlin-android-extensions'
 
 android {
   compileSdkVersion 27
-  buildToolsVersion "27.0.1"
+  buildToolsVersion "27.0.3"
   defaultConfig {
-    applicationId "erikjhordanrey.android_kotlin_devises"
+    applicationId "com.lishiyo.kotlin_arch"
     minSdkVersion 15
     targetSdkVersion 27
     versionCode 1
@@ -36,6 +36,7 @@ dependencies {
 
   compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
 
+  // lifecycle and room
   String archVersion = '1.0.0'
   compile "android.arch.lifecycle:runtime:$archVersion"
   compile "android.arch.lifecycle:extensions:$archVersion"
@@ -44,22 +45,25 @@ dependencies {
   kapt "android.arch.persistence.room:compiler:$archVersion"
   compile "android.arch.persistence.room:rxjava2:$archVersion"
 
+  // retrofit and gson
   compile 'com.squareup.retrofit2:retrofit:2.3.0'
   compile "com.squareup.retrofit2:converter-gson:2.3.0"
-  compile 'com.squareup.okhttp3:okhttp:3.9.0'
+  compile 'com.squareup.okhttp3:okhttp:3.9.1'
   compile 'com.squareup.retrofit2:adapter-rxjava2:2.3.0'
-  compile 'com.squareup.okhttp3:logging-interceptor:3.8.1'
+  compile 'com.squareup.okhttp3:logging-interceptor:3.9.1'
 
-  String supportVersion = '27.0.0'
+  String supportVersion = '27.0.2'
   compile "com.android.support:appcompat-v7:$supportVersion"
   compile "com.android.support:design:$supportVersion"
   compile "com.android.support:support-vector-drawable:$supportVersion"
   compile 'com.android.support.constraint:constraint-layout:1.0.2'
 
+  // Dagger2
   String daggerVersion = '2.13'
   compile "com.google.dagger:dagger:$daggerVersion"
   kapt "com.google.dagger:dagger-compiler:$daggerVersion"
 
+  // Rx
   compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
   compile 'io.reactivex.rxjava2:rxjava:2.1.5'
 }

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.view
+package lishiyo.kotlin_arch.view
 
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
 import android.view.MenuItem
-import erikjhordanrey.android_kotlin_devises.R
+import lishiyo.kotlin_arch.R
 import kotlinx.android.synthetic.main.activity_main.*
 
 

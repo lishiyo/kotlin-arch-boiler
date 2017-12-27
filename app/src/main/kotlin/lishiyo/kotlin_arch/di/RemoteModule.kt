@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.di
+package lishiyo.kotlin_arch.di
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
-import erikjhordanrey.android_kotlin_devises.data.remote.RemoteContract
-import erikjhordanrey.android_kotlin_devises.data.remote.RemoteCurrencyService
+import lishiyo.kotlin_arch.data.remote.RemoteContract
+import lishiyo.kotlin_arch.data.remote.RemoteCurrencyService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -50,7 +50,7 @@ class RemoteModule {
           .addConverterFactory(GsonConverterFactory.create(gson))
           .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
           .client(okHttpClient)
-          .build();
+          .build()
 
 
   @Provides @Singleton fun provideRemoteCurrencyService(retrofit: Retrofit): RemoteCurrencyService =

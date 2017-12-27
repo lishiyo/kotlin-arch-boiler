@@ -14,22 +14,18 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.room
+package lishiyo.kotlin_arch.di
 
-class RoomContract {
+import android.content.Context
+import dagger.Module
+import dagger.Provides
+import javax.inject.Singleton
 
-  companion object {
+@Module
+class AppModule(private val currencyApplication: CurrencyApplication) {
 
-    const val DATABASE_CURRENCY = "currency.db"
+  @Provides @Singleton fun provideContext(): Context = currencyApplication
 
-    const val TABLE_CURRENCIES = "currencies"
-
-    private const val SELECT_COUNT = "SELECT COUNT(*) FROM "
-    private const val SELECT_FROM = "SELECT * FROM "
-
-    const val SELECT_CURRENCIES_COUNT = SELECT_COUNT + TABLE_CURRENCIES
-    const val SELECT_CURRENCIES = SELECT_FROM + TABLE_CURRENCIES
-
-  }
 }
+
 

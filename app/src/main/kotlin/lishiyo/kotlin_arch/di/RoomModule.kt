@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.di
+package lishiyo.kotlin_arch.di
 
 import android.content.Context
 import dagger.Module
 import dagger.Provides
-import erikjhordanrey.android_kotlin_devises.data.room.RoomCurrencyDataSource
+import lishiyo.kotlin_arch.data.room.RoomCurrencyDataSource
 import javax.inject.Singleton
 
 @Module

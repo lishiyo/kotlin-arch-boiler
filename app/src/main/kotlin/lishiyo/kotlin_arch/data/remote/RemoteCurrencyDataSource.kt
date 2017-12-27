@@ -14,26 +14,14 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.di
+package lishiyo.kotlin_arch.data.remote
 
-import android.app.Application
+import javax.inject.Inject
 
-class CurrencyApplication : Application() {
+class RemoteCurrencyDataSource @Inject constructor(private val remoteCurrencyService: RemoteCurrencyService) {
 
-  companion object {
-    lateinit var appComponent: AppComponent
-  }
-
-  override fun onCreate() {
-    super.onCreate()
-    initializeDagger()
-  }
-
-  fun initializeDagger() {
-    appComponent = DaggerAppComponent.builder()
-        .appModule(AppModule(this))
-        .roomModule(RoomModule())
-        .remoteModule(RemoteModule()).build()
-  }
+  fun requestAvailableExchange(currencies: String) =
+      remoteCurrencyService.requestAvailableExchange(
+          RemoteContract.ACCESS_KEY_API_LAYER, currencies, RemoteContract.FORMAT_TYPE)
 }
 

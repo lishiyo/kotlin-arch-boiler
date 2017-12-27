@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.room
+package lishiyo.kotlin_arch.data.remote
 
-import android.arch.persistence.room.Entity
-import android.arch.persistence.room.PrimaryKey
+import com.google.gson.annotations.SerializedName
 
-@Entity(tableName = RoomContract.TABLE_CURRENCIES)
-data class CurrencyEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long,
-    var countryCode: String,
-    var countryName: String
+data class CurrencyResponse(
+    @SerializedName(RemoteContract.SUCCESS) val isSuccess: Boolean,
+    @SerializedName(RemoteContract.QUOTES) val currencyQuotes: Map<String, Double>
 )
-

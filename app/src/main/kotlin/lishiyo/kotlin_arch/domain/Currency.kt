@@ -14,22 +14,7 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.repository
+package lishiyo.kotlin_arch.domain
 
-import android.arch.lifecycle.LiveData
-import erikjhordanrey.android_kotlin_devises.domain.AvailableExchange
-import erikjhordanrey.android_kotlin_devises.domain.Currency
-import io.reactivex.Flowable
+data class Currency(var code: String, var country: String)
 
-
-interface Repository {
-
-  fun getTotalCurrencies(): Flowable<Int>
-
-  fun addCurrencies()
-
-  fun getCurrencyList(): LiveData<List<Currency>>
-
-  fun getAvailableExchange(currencies: String): LiveData<AvailableExchange>
-
-}

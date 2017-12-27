@@ -14,18 +14,24 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.di
+package lishiyo.kotlin_arch.data.room
 
-import android.content.Context
-import dagger.Module
-import dagger.Provides
-import javax.inject.Singleton
+import android.arch.persistence.room.Dao
+import android.arch.persistence.room.Insert
+import android.arch.persistence.room.Query
+import io.reactivex.Flowable
 
-@Module
-class AppModule(private val currencyApplication: CurrencyApplication) {
+@Dao
+interface RoomCurrencyDao {
 
-  @Provides @Singleton fun provideContext(): Context = currencyApplication
+  @Query(RoomContract.SELECT_CURRENCIES_COUNT)
+  fun getCurrenciesTotal(): Flowable<Int>
+
+  @Insert
+  fun insertAll(currencies: List<CurrencyEntity>)
+
+  @Query(RoomContract.SELECT_CURRENCIES)
+  fun getAllCurrencies(): Flowable<List<CurrencyEntity>>
 
 }
-
 

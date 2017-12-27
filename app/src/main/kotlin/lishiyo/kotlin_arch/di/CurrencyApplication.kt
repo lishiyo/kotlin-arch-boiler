@@ -14,21 +14,26 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.remote
+package lishiyo.kotlin_arch.di
 
-import io.reactivex.Observable
-import retrofit2.http.GET
-import retrofit2.http.Query
+import android.app.Application
 
-interface RemoteCurrencyService {
+class CurrencyApplication : Application() {
 
-  @GET(RemoteContract.LIVE)
-  fun requestAvailableExchange(
-      @Query(RemoteContract.ACCESS_KEY) accessKey: String,
-      @Query(RemoteContract.CURRENCIES) currencies: String,
-      @Query(RemoteContract.FORMAT) format: String
-  ): Observable<CurrencyResponse>
+  companion object {
+    lateinit var appComponent: AppComponent
+  }
 
+  override fun onCreate() {
+    super.onCreate()
+    initializeDagger()
+  }
+
+  fun initializeDagger() {
+    appComponent = DaggerAppComponent.builder()
+        .appModule(AppModule(this))
+        .roomModule(RoomModule())
+        .remoteModule(RemoteModule()).build()
+  }
 }
-
 

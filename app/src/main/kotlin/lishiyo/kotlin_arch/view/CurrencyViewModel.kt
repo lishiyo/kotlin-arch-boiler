@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.view
+package lishiyo.kotlin_arch.view
 
+import android.arch.lifecycle.*
 import android.arch.lifecycle.Lifecycle.Event.ON_DESTROY
-import android.arch.lifecycle.LifecycleObserver
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.OnLifecycleEvent
-import android.arch.lifecycle.ViewModel
 import android.util.Log
-import erikjhordanrey.android_kotlin_devises.data.repository.CurrencyRepository
-import erikjhordanrey.android_kotlin_devises.di.CurrencyApplication
-import erikjhordanrey.android_kotlin_devises.domain.AvailableExchange
-import erikjhordanrey.android_kotlin_devises.domain.Currency
+import lishiyo.kotlin_arch.data.repository.CurrencyRepository
+import lishiyo.kotlin_arch.di.CurrencyApplication
+import lishiyo.kotlin_arch.domain.AvailableExchange
+import lishiyo.kotlin_arch.domain.Currency
 import io.reactivex.Completable
 import io.reactivex.CompletableObserver
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -56,7 +52,6 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver {
     return liveAvailableExchange
   }
 
-
   fun loadCurrencyList(): LiveData<List<Currency>>? {
     if (liveCurrencyData == null) {
       liveCurrencyData = MutableLiveData<List<Currency>>()
@@ -80,7 +75,7 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver {
   }
 
   @OnLifecycleEvent(ON_DESTROY)
-  private fun unSubscribeViewModel() {
+  fun unSubscribeViewModel() {
     for (disposable in currencyRepository.allCompositeDisposable) {
       compositeDisposable.addAll(disposable)
     }

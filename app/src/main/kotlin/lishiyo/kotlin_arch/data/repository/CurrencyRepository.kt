@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.repository
+package lishiyo.kotlin_arch.data.repository
 
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
-import erikjhordanrey.android_kotlin_devises.data.remote.CurrencyResponse
-import erikjhordanrey.android_kotlin_devises.data.remote.RemoteCurrencyDataSource
-import erikjhordanrey.android_kotlin_devises.data.room.CurrencyEntity
-import erikjhordanrey.android_kotlin_devises.data.room.RoomCurrencyDataSource
-import erikjhordanrey.android_kotlin_devises.domain.AvailableExchange
-import erikjhordanrey.android_kotlin_devises.domain.Currency
+import lishiyo.kotlin_arch.data.remote.CurrencyResponse
+import lishiyo.kotlin_arch.data.remote.RemoteCurrencyDataSource
+import lishiyo.kotlin_arch.data.room.CurrencyEntity
+import lishiyo.kotlin_arch.data.room.RoomCurrencyDataSource
+import lishiyo.kotlin_arch.domain.AvailableExchange
+import lishiyo.kotlin_arch.domain.Currency
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Manages local and remote data sources.
+ */
 @Singleton
 class CurrencyRepository @Inject constructor(
     private val roomCurrencyDataSource: RoomCurrencyDataSource,

@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-package erikjhordanrey.android_kotlin_devises.data.remote
+package lishiyo.kotlin_arch.di
 
-import com.google.gson.annotations.SerializedName
+import dagger.Component
+import lishiyo.kotlin_arch.view.CurrencyViewModel
+import javax.inject.Singleton
 
-data class CurrencyResponse(
-    @SerializedName(RemoteContract.SUCCESS) val isSuccess: Boolean,
-    @SerializedName(RemoteContract.QUOTES) val currencyQuotes: Map<String, Double>
-)
+@Component(modules = arrayOf(AppModule::class, RoomModule::class, RemoteModule::class))
+@Singleton interface AppComponent {
+
+  fun inject(currencyViewModel: CurrencyViewModel)
+
+}
+
+
