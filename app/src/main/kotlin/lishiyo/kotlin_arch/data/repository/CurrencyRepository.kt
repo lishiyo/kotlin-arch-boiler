@@ -18,6 +18,7 @@ package lishiyo.kotlin_arch.data.repository
 
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
+import io.reactivex.Flowable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -49,7 +50,15 @@ class CurrencyRepository @Inject constructor(
     roomCurrencyDataSource.currencyDao().insertAll(currencyEntityList)
   }
 
-  override fun getCurrencyList(): LiveData<List<Currency>> {
+  fun getCurrenciesLocal(): Flowable<List<Currency>> {
+    return roomCurrencyDataSource.currencyDao()
+            .getAllCurrencies()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { currencyList -> transform(currencyList) }
+  }
+
+  override fun getCurrencyListAsLiveData(): LiveData<List<Currency>> {
     val roomCurrencyDao = roomCurrencyDataSource.currencyDao()
     val mutableLiveData = MutableLiveData<List<Currency>>()
     val disposable = roomCurrencyDao.getAllCurrencies()
@@ -74,7 +83,7 @@ class CurrencyRepository @Inject constructor(
   }
 
   // currencies of the form "AED,USD"
-  override fun getAvailableExchange(currencies: String): LiveData<AvailableExchange> {
+  override fun getAvailableExchangeAsLiveData(currencies: String): LiveData<AvailableExchange> {
     val mutableLiveData = MutableLiveData<AvailableExchange>()
     val disposable = remoteCurrencyDataSource.requestAvailableExchange(currencies)
         .subscribeOn(Schedulers.io())

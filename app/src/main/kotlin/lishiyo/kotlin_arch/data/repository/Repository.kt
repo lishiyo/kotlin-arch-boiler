@@ -28,8 +28,8 @@ interface Repository {
 
   fun addCurrencies()
 
-  fun getCurrencyList(): LiveData<List<Currency>>
+  fun getCurrencyListAsLiveData(): LiveData<List<Currency>>
 
-  fun getAvailableExchange(currencies: String): LiveData<AvailableExchange>
+  fun getAvailableExchangeAsLiveData(currencies: String): LiveData<AvailableExchange>
 
 }

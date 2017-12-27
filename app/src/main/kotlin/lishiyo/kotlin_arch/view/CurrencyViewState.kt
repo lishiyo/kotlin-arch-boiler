@@ -7,7 +7,7 @@ import lishiyo.kotlin_arch.mvibase.MviViewState
 /**
  * Created by connieli on 12/26/17.
  */
-class CurrencyViewState : MviViewState {
+sealed class CurrencyViewState : MviViewState {
     // whether in process of converting
     var isLoading: Boolean = false
 
@@ -24,4 +24,10 @@ class CurrencyViewState : MviViewState {
 
     // full list of currencies
     var currencies: LiveData<List<Currency>>? = null
+
+    object IdleState : CurrencyViewState() {
+         init {
+             isLoading = false
+         }
+    }
 }

@@ -81,6 +81,7 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
     initSpinners()
     initConvertButton()
 
+    // send off LOAD intent
 //    populateSpinnerAdapter()
     mLoadCurrenciesPublisher.onNext(CurrencyIntent.LoadCurrencies.create())
   }
@@ -139,11 +140,11 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
 
     if (quantity.isNotEmpty() && currencyFrom != currencyTo) {
 //      currencyViewModel
-//              ?.getAvailableExchange(currencies)
+//              ?.getAvailableExchangeAsLiveData(currencies)
 //              ?.observe(this, Observer { availableExchange ->
 //                exchange(quantity.toDouble(), availableExchange!!.availableExchangesMap)
 //              })
-      mConvertPublisher.onNext(CurrencyIntent.Convert.create(currencyFrom!!, currencyTo!!))
+      mConvertPublisher.onNext(CurrencyIntent.Convert.create(currencyFrom!!, currencyTo!!, quantity.toDouble()))
     } else {
       Toast.makeText(activity, "Could not convert.", Toast.LENGTH_SHORT).show()
     }

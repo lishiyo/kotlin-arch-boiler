@@ -3,10 +3,12 @@ package lishiyo.kotlin_arch.utils.schedulers
 import io.reactivex.Scheduler
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import javax.inject.Singleton
 
 /**
  * Provides different types of schedulers.
  */
+@Singleton
 object SchedulerProvider : BaseSchedulerProvider {
 
     override fun computation(): Scheduler {
@@ -20,19 +22,4 @@ object SchedulerProvider : BaseSchedulerProvider {
     override fun ui(): Scheduler {
         return AndroidSchedulers.mainThread()
     }
-
-//    companion object {
-//
-//
-//
-//        private var INSTANCE: SchedulerProvider? = null
-//
-//        val instance: SchedulerProvider
-//            @Synchronized get() {
-//                if (INSTANCE == null) {
-//                    INSTANCE = SchedulerProvider()
-//                }
-//                return INSTANCE
-//            }
-//    }
 }

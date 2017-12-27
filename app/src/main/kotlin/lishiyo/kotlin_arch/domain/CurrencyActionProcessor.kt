@@ -2,7 +2,6 @@ package lishiyo.kotlin_arch.domain
 
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
-import io.reactivex.schedulers.Schedulers
 import lishiyo.kotlin_arch.data.repository.CurrencyRepository
 import lishiyo.kotlin_arch.utils.schedulers.BaseSchedulerProvider
 import javax.inject.Inject
@@ -31,21 +30,27 @@ class CurrencyActionProcessor @Inject constructor(private val currencyRepository
     }
 
 
+    // ==== individual list of processors (action -> result) ====
 
-    // private list of processors (action -> result)
+    // seed the database
     private val seedDatabaseProcessor: ObservableTransformer<CurrencyAction.Seed, CurrencyResult.Seeded> = ObservableTransformer {
-        acts -> acts.flatMap { act -> currencyRepository.getTotalCurrencies().subscribeOn(Schedulers.io()).toObservable()
-            }.filter { count -> isRoomEmpty(count) }
+        acts -> acts.flatMap { act -> currencyRepository.getTotalCurrencies().toObservable().subscribeOn(schedulerProvider.io()) }
+            .filter { count -> isRoomEmpty(count) } // populate room if it's empty
             .doOnNext { _ -> currencyRepository.addCurrencies() }
             .map { _ -> CurrencyResult.Seeded.createSuccess() }
+            .onErrorReturn { err -> CurrencyResult.Seeded.createError(err) }
     }
 
+    // load the currencies
     private val loadCurrenciesProcessor: ObservableTransformer<CurrencyAction.LoadCurrencies, CurrencyResult.CurrenciesLoaded> =
             ObservableTransformer {
-        acts -> acts.map { _ -> CurrencyResult.CurrenciesLoaded.createError(Throwable()) }
+        acts -> acts.startWith { _ -> CurrencyResult.CurrenciesLoaded.createLoading() }
+                    .flatMap { _ -> currencyRepository.getCurrenciesLocal().toObservable().subscribeOn(schedulerProvider.io()) }
+                    .filter { list -> !list.isEmpty() }
+                    .map { list -> CurrencyResult.CurrenciesLoaded.createSuccess(list) }
+                    .onErrorReturn{ err -> CurrencyResult.CurrenciesLoaded.createError(err) }
     }
 
     private fun isRoomEmpty(currenciesTotal: Int) = currenciesTotal == 0
-
 
 }

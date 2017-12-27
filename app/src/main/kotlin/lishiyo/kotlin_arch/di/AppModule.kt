@@ -21,7 +21,6 @@ import dagger.Module
 import dagger.Provides
 import lishiyo.kotlin_arch.data.repository.CurrencyRepository
 import lishiyo.kotlin_arch.domain.CurrencyActionProcessor
-import lishiyo.kotlin_arch.utils.schedulers.BaseSchedulerProvider
 import lishiyo.kotlin_arch.utils.schedulers.SchedulerProvider
 import javax.inject.Singleton
 
@@ -30,9 +29,13 @@ class AppModule(private val currencyApplication: CurrencyApplication) {
 
   @Provides @Singleton fun provideContext(): Context = currencyApplication
 
-  @Provides @Singleton fun provideCurrencyActionProcessor(repo: CurrencyRepository, scheduler: BaseSchedulerProvider)
+  @Provides @Singleton fun provideCurrencyActionProcessor(repo: CurrencyRepository)
           : CurrencyActionProcessor {
     return CurrencyActionProcessor(repo, SchedulerProvider)
+  }
+
+  @Provides @Singleton fun provideSchedulerProvider(): SchedulerProvider {
+    return SchedulerProvider
   }
 }
 
