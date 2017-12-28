@@ -16,12 +16,12 @@
 
 package lishiyo.kotlin_arch.view
 
+import android.app.AlertDialog
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.app.Fragment
-import android.support.v7.app.AlertDialog
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -38,7 +38,7 @@ import lishiyo.kotlin_arch.mvibase.MviView
 
 
 class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> {
-
+  // Current list of currencies
   private val currencies = ArrayList<String>()
   private var currenciesAdapter: ArrayAdapter<String>? = null
   private var currencyFrom: String? = null
@@ -53,7 +53,7 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
   // Stream of ALL intents that should push to ViewModel
   override fun intents(): Observable<out CurrencyIntent> {
     return Observable.merge(
-            Observable.just(CurrencyIntent.Initial.create()), // send out initial emission
+            Observable.just(CurrencyIntent.Initial.create()), // send out initial intent immediately
             mLoadCurrenciesPublisher,
             mConvertPublisher,
             mRefreshPublisher
@@ -62,6 +62,29 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
 
   override fun render(state: CurrencyViewState) {
     // render based on the current view state
+
+    // alert with an error message
+    val err = state.error
+    err?.let {
+      showResult("there was an error: ${err.localizedMessage}}")
+    }
+
+    if (state.isLoading) {
+      // loading
+      Log.i("connie", "CurrencyFrag ++ render loading...")
+    } else if (state.error == null) {
+      // success
+      Log.i("connie", "CurrencyFrag ++ render success!")
+    }
+
+    // add currencies
+    state.currencies.value?.let {
+      Log.i("connie", "got currencies list!")
+      it.forEach { currencies.add(it.code + "  " + it.country) }
+      currenciesAdapter?.notifyDataSetChanged()
+    }
+
+    // todo: handle convert
 
   }
 
@@ -80,11 +103,13 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
 
     initSpinners()
     initConvertButton()
+    currenciesAdapter!!.setDropDownViewResource(R.layout.item_spinner)
 
-    // send off LOAD intent
+    // send off LOAD intent immediately
 //    populateSpinnerAdapter()
     mLoadCurrenciesPublisher.onNext(CurrencyIntent.LoadCurrencies.create())
   }
+
 
   private fun initViewModel() {
     currencyViewModel = ViewModelProviders.of(this).get(CurrencyViewModel::class.java)
@@ -100,21 +125,21 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
       }
     })
 
-    // Bind ViewModel to intents stream - will send off INIT intent to seed the db
+    // Bind ViewModel to merged intents stream - will send off INIT intent to seed the db
     currencyViewModel.processIntents(intents())
 
 //    currencyViewModel.initLocalCurrencies()
   }
 
-  private fun populateSpinnerAdapter() {
-//    currencyViewModel?.loadCurrencyList()?.observe(this, Observer { currencyList ->
-//      currencyList!!.forEach {
-//        currencies.add(it.code + "  " + it.country)
-//      }
-//      currenciesAdapter!!.setDropDownViewResource(R.layout.item_spinner)
-//      currenciesAdapter!!.notifyDataSetChanged()
-//    })
-  }
+//  private fun populateSpinnerAdapter() {
+////    currencyViewModel?.loadCurrencyList()?.observe(this, Observer { currencyList ->
+////      currencyList!!.forEach {
+////        currencies.add(it.code + "  " + it.country)
+////      }
+////      currenciesAdapter!!.setDropDownViewResource(R.layout.item_spinner)
+////      currenciesAdapter!!.notifyDataSetChanged()
+////    })
+//  }
 
   private fun initSpinners() {
     currenciesAdapter = ArrayAdapter(activity, R.layout.item_spinner, currencies)
@@ -132,7 +157,6 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
 
   // You can move all this logic to the view model
   private fun convert() {
-    // TODO: this should be an intent
     val quantity = currency_edit.text.toString()
     currencyFrom = getCurrencyCode(from_currency_spinner.selectedItem.toString())
     currencyTo = getCurrencyCode(to_currency_spinner.selectedItem.toString())
@@ -164,8 +188,8 @@ class CurrencyFragment : Fragment(), MviView<CurrencyIntent, CurrencyViewState> 
 //    val usdExchange = quantity.div(fromCurrency)
 //    val exchangeResult = usdExchange.times(toCurrency)
 //
-//    val result = quantity.toString() + " " + fromCurrencyKey + " = " + exchangeResult.format(4) + " " + toCurrencyKey
-//    showResult(result)
+//    val convertedTotal = quantity.toString() + " " + fromCurrencyKey + " = " + exchangeResult.format(4) + " " + toCurrencyKey
+//    showResult(convertedTotal)
 //  }
 
   private fun showResult(result: String) {

@@ -1,33 +1,25 @@
 package lishiyo.kotlin_arch.view
 
-import android.arch.lifecycle.LiveData
+import android.arch.lifecycle.MutableLiveData
 import lishiyo.kotlin_arch.domain.Currency
 import lishiyo.kotlin_arch.mvibase.MviViewState
 
 /**
  * Created by connieli on 12/26/17.
  */
-sealed class CurrencyViewState : MviViewState {
-    // whether in process of converting
-    var isLoading: Boolean = false
+data class CurrencyViewState(
+        var isLoading: Boolean = false,
+        var error: Throwable? = null, // null if no error
+        var currencyFrom: String? = null,
+        var currencyTo: String? = null,
+        var quantity: Double? = null, // quantity to convert
+        var convertedTotal: Double? = null, // final converted convertedTotal (quantity * exchangeRate)
+        val currencies: MutableLiveData<List<Currency>> = MutableLiveData() // full list of currencies
+) : MviViewState {
 
-    // full currency name
-    var currencyFrom: String = ""
-
-    var currencyTo: String = ""
-
-    // quantity to convert
-    var quantity: Double = 0.0
-
-    // final converted result (quantity * exchangeRate)
-    var result: Double = 0.0
-
-    // full list of currencies
-    var currencies: LiveData<List<Currency>>? = null
-
-    object IdleState : CurrencyViewState() {
-         init {
-             isLoading = false
-         }
+    companion object {
+        // start with this!
+        @JvmField val IDLE = CurrencyViewState(isLoading = false)
     }
+
 }

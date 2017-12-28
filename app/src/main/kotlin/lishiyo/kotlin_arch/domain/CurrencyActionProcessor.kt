@@ -1,5 +1,6 @@
 package lishiyo.kotlin_arch.domain
 
+import android.util.Log
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
 import lishiyo.kotlin_arch.data.repository.CurrencyRepository
@@ -17,38 +18,41 @@ class CurrencyActionProcessor @Inject constructor(private val currencyRepository
                                                   private val schedulerProvider: BaseSchedulerProvider) {
 
     // main processor to combine then
-    val combinedProcessor: ObservableTransformer<in CurrencyAction, out CurrencyResult> = ObservableTransformer {
-        acts -> acts.publish<CurrencyResult> { shared: Observable<in CurrencyAction> -> Observable.merge<CurrencyResult>(
-            shared.ofType<CurrencyAction.Seed>(CurrencyAction.Seed::class.java).compose(seedDatabaseProcessor),
-            shared.ofType<CurrencyAction.LoadCurrencies>(CurrencyAction.LoadCurrencies::class.java).compose(loadCurrenciesProcessor)
-        ).mergeWith(
-            // Error for not implemented actions
-            shared.filter { v ->
-                (v !is CurrencyAction.Seed && v !is CurrencyAction.LoadCurrencies && v !is CurrencyAction.Convert)
-            }.flatMap { w -> Observable.error<CurrencyResult>(IllegalArgumentException("Unknown Action type: " + w)) })
+    val combinedProcessor: ObservableTransformer<CurrencyAction, CurrencyResult> = ObservableTransformer {
+        acts -> acts.publish { shared ->
+            Observable.merge<CurrencyResult>(
+                    shared.ofType<CurrencyAction.Seed>(CurrencyAction.Seed::class.java).compose(seedDatabaseProcessor),
+                    shared.ofType<CurrencyAction.LoadCurrencies>(CurrencyAction.LoadCurrencies::class.java).compose(loadCurrenciesProcessor)
+            ).mergeWith(
+                    // Error for not implemented actions
+                    shared.filter { v -> (v !is CurrencyAction.Seed && v !is CurrencyAction.LoadCurrencies && v !is CurrencyAction.Convert)
+                            }.flatMap { w -> Observable.error<CurrencyResult>(IllegalArgumentException("Unknown Action type: " + w)) }
+            )
         }
     }
 
-
-    // ==== individual list of processors (action -> result) ====
+    // ==== individual list of processors (action -> convertedTotal) ====
 
     // seed the database
-    private val seedDatabaseProcessor: ObservableTransformer<CurrencyAction.Seed, CurrencyResult.Seeded> = ObservableTransformer {
-        acts -> acts.flatMap { act -> currencyRepository.getTotalCurrencies().toObservable().subscribeOn(schedulerProvider.io()) }
+    private val seedDatabaseProcessor: ObservableTransformer<CurrencyAction.Seed, CurrencyResult.Seed> = ObservableTransformer {
+        acts -> acts.flatMap { act -> currencyRepository.getTotalCurrencyCounts().toObservable() }
+            .doOnNext { count -> Log.i("connie", "SEED: got count $count")}
             .filter { count -> isRoomEmpty(count) } // populate room if it's empty
             .doOnNext { _ -> currencyRepository.addCurrencies() }
-            .map { _ -> CurrencyResult.Seeded.createSuccess() }
-            .onErrorReturn { err -> CurrencyResult.Seeded.createError(err) }
+            .map { _ -> CurrencyResult.Seed.createSuccess() }
+            .onErrorReturn { err -> CurrencyResult.Seed.createError(err) }
+            .startWith(CurrencyResult.Seed.createLoading())
     }
 
     // load the currencies
-    private val loadCurrenciesProcessor: ObservableTransformer<CurrencyAction.LoadCurrencies, CurrencyResult.CurrenciesLoaded> =
+    private val loadCurrenciesProcessor: ObservableTransformer<CurrencyAction.LoadCurrencies, CurrencyResult.LoadCurrencies> =
             ObservableTransformer {
-        acts -> acts.startWith { _ -> CurrencyResult.CurrenciesLoaded.createLoading() }
-                    .flatMap { _ -> currencyRepository.getCurrenciesLocal().toObservable().subscribeOn(schedulerProvider.io()) }
+        acts -> acts.flatMap { _ -> currencyRepository.getAllCurrencies().toObservable() }
+                    .doOnNext { list -> Log.i("connie", "LOAD ++ list size: ${list.size}")}
                     .filter { list -> !list.isEmpty() }
-                    .map { list -> CurrencyResult.CurrenciesLoaded.createSuccess(list) }
-                    .onErrorReturn{ err -> CurrencyResult.CurrenciesLoaded.createError(err) }
+                    .map { list -> CurrencyResult.LoadCurrencies.createSuccess(list) }
+                    .onErrorReturn{ err -> CurrencyResult.LoadCurrencies.createError(err) }
+                    .startWith(CurrencyResult.LoadCurrencies.createLoading())
     }
 
     private fun isRoomEmpty(currenciesTotal: Int) = currenciesTotal == 0

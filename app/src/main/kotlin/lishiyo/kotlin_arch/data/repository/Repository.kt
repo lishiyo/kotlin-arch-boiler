@@ -16,20 +16,27 @@
 
 package lishiyo.kotlin_arch.data.repository
 
-import android.arch.lifecycle.LiveData
 import io.reactivex.Flowable
+import io.reactivex.Observable
 import lishiyo.kotlin_arch.domain.AvailableExchange
 import lishiyo.kotlin_arch.domain.Currency
 
 // Data source for currencies
 interface Repository {
 
-  fun getTotalCurrencies(): Flowable<Int>
+  // Local - currency list from room
+  fun getAllCurrencies(): Flowable<List<Currency>>
 
+  // Remote - exchange
+  fun getAvailableExchange(currencyString: String): Observable<AvailableExchange>
+
+  fun getTotalCurrencyCounts(): Flowable<Int>
+
+  // seed the db
   fun addCurrencies()
 
-  fun getCurrencyListAsLiveData(): LiveData<List<Currency>>
+//  fun getCurrencyListAsLiveData(): LiveData<List<Currency>>
 
-  fun getAvailableExchangeAsLiveData(currencies: String): LiveData<AvailableExchange>
+//  fun getAvailableExchange(currencies: String): LiveData<AvailableExchange>
 
 }

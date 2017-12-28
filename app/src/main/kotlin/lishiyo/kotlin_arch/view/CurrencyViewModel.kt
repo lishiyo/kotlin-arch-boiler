@@ -19,23 +19,21 @@ package lishiyo.kotlin_arch.view
 import android.arch.lifecycle.*
 import android.arch.lifecycle.Lifecycle.Event.ON_DESTROY
 import android.util.Log
-import io.reactivex.Completable
-import io.reactivex.CompletableObserver
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.annotations.NonNull
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
 import io.reactivex.functions.BiFunction
-import io.reactivex.schedulers.Schedulers
+import io.reactivex.observables.ConnectableObservable
 import io.reactivex.subjects.PublishSubject
 import lishiyo.kotlin_arch.data.repository.CurrencyRepository
 import lishiyo.kotlin_arch.di.CurrencyApplication
-import lishiyo.kotlin_arch.domain.*
+import lishiyo.kotlin_arch.domain.CurrencyAction
+import lishiyo.kotlin_arch.domain.CurrencyActionProcessor
+import lishiyo.kotlin_arch.domain.CurrencyResult
 import lishiyo.kotlin_arch.mvibase.MviIntent
 import lishiyo.kotlin_arch.mvibase.MviViewModel
 import lishiyo.kotlin_arch.utils.schedulers.SchedulerProvider
+import java.util.*
 import javax.inject.Inject
 
 class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyIntent, CurrencyViewState> {
@@ -47,40 +45,117 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
     private val compositeDisposable = CompositeDisposable()
 
     // LiveData-wrapped list of currencies
-    private val liveCurrencyData: LiveData<List<Currency>> by lazy {
-        currencyRepository.getCurrencyListAsLiveData() // called one-time
-    }
+//    private val liveCurrencyData: LiveData<List<Currency>> by lazy { MutableLiveData<List<Currency>>() }
+
     // LiveData-wrapped exchange model
-    private lateinit var liveAvailableExchange: LiveData<AvailableExchange>
+//    private val liveAvailableExchange: MutableLiveData<AvailableExchange> by lazy { MutableLiveData<AvailableExchange>() }
 
     // LiveData-wrapped current ViewState
-    private lateinit var liveViewState: MutableLiveData<CurrencyViewState>
+    private val liveViewState: MutableLiveData<CurrencyViewState> by lazy { MutableLiveData<CurrencyViewState>() }
 
     // subject to publish currency view states
     private val intentsSubject : PublishSubject<CurrencyIntent> by lazy { PublishSubject.create<CurrencyIntent>() }
-
 
     /**
      * take only the first ever InitialIntent and all intents of other types
      * to avoid reloading data on config changes
      */
     private val intentFilter: ObservableTransformer<CurrencyIntent, CurrencyIntent> = ObservableTransformer { intents ->
-        intents.publish({ shared ->
+//        intents.filter{ intent -> intent is CurrencyIntent }
+        intents.publish { shared -> shared
             Observable.merge<CurrencyIntent>(
-                    shared.ofType(CurrencyIntent.Initial::class.java).take(1),
+                    shared.ofType(CurrencyIntent.Initial::class.java).take(1), // only take initial one time
                     shared.filter({ intent -> intent !is CurrencyIntent.Initial })
-            )}
-        )
+            )
+        }
     }
 
-    // Preview ViewState + Result => New ViewState
+    // Previous ViewState + Result => New ViewState
     private val reducer: BiFunction<CurrencyViewState, CurrencyResult, CurrencyViewState> = BiFunction { previousState, result ->
+        Log.i("connie", "reducer ++ result: ${result.javaClass.simpleName} with status: ${result.status}")
         when (result) {
-            is CurrencyResult.Seeded -> return@BiFunction CurrencyViewState.IdleState
-            is CurrencyResult.CurrenciesLoaded -> return@BiFunction CurrencyViewState.IdleState
-            is CurrencyResult.Converted -> return@BiFunction CurrencyViewState.IdleState
-            else -> throw IllegalArgumentException("Don't know this result " + result)
+            is CurrencyResult.Seed -> return@BiFunction createSeedResult(previousState, result)
+            is CurrencyResult.LoadCurrencies -> return@BiFunction createLoadCurrenciesResult(previousState, result)
+            is CurrencyResult.Convert -> return@BiFunction createConvertResult(previousState, result)
+            else -> throw IllegalArgumentException("Don't know this convertedTotal " + result)
         }
+    }
+
+    // ===== Individual reducers ======
+
+    private fun createSeedResult(previousState: CurrencyViewState, result: CurrencyResult.Seed): CurrencyViewState {
+        val newState: CurrencyViewState = previousState.copy()
+        newState.error = null
+
+        when (result.status) {
+            CurrencyResult.Status.LOADING -> {
+                newState.isLoading = true
+            }
+            CurrencyResult.Status.SUCCESS, CurrencyResult.Status.IDLE -> {
+                newState.isLoading = false
+            }
+            CurrencyResult.Status.FAILURE -> {
+                newState.isLoading = false
+                newState.error = result.error
+            }
+        }
+
+        return newState
+    }
+
+    private fun createLoadCurrenciesResult(previousState: CurrencyViewState, result: CurrencyResult.LoadCurrencies): CurrencyViewState {
+        val newState: CurrencyViewState = previousState.copy()
+        newState.error = null
+
+        when (result.status) {
+            CurrencyResult.Status.LOADING -> {
+                newState.isLoading = true
+                newState.currencies.postValue(Collections.emptyList()) // clear out previous
+            }
+            CurrencyResult.Status.SUCCESS -> {
+                newState.isLoading = false
+                newState.currencies.postValue(result.currencies)
+            }
+            CurrencyResult.Status.FAILURE -> {
+                newState.isLoading = false
+                newState.error = result.error
+            }
+        }
+
+        return newState
+    }
+
+    private fun createConvertResult(previousState: CurrencyViewState, result: CurrencyResult.Convert): CurrencyViewState {
+        val newState: CurrencyViewState = previousState.copy()
+        newState.error = null
+        newState.convertedTotal = null
+        newState.currencyFrom = result.currencyFrom
+        newState.currencyTo = result.currencyTo
+        newState.quantity = result.quantity
+
+        when (result.status) {
+            CurrencyResult.Status.LOADING -> {
+                newState.isLoading = true
+                newState.currencies.postValue(Collections.emptyList()) // clear out
+            }
+            CurrencyResult.Status.SUCCESS -> {
+                newState.isLoading = false
+
+                // calculate converted result
+                val exchangeRate = result.exchangeRate
+                val quantity = result.quantity
+                if (quantity!! > 0 && exchangeRate!! > 0) {
+                    val totalQuantity = quantity * exchangeRate
+                    newState.convertedTotal = totalQuantity
+                }
+            }
+            CurrencyResult.Status.FAILURE -> {
+                newState.isLoading = false
+                newState.error = result.error
+            }
+        }
+
+        return newState
     }
 
     init {
@@ -88,31 +163,40 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
         initializeDagger()
 
         // create observable to push into states live data
-        val observable = intentsSubject
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        val observable: ConnectableObservable<CurrencyViewState> = intentsSubject
+                .subscribeOn(schedulerProvider.io())
+                .observeOn(schedulerProvider.ui())
+                .doOnSubscribe{ Log.i("connie", "subscribed!") }
+                .doOnDispose{ Log.i("connie", "disposed!") }
+                .doOnTerminate { Log.i("connie", "terminated!") }
                 .compose(intentFilter)
                 .map{ it -> actionFromIntent(it)}
+                .doOnNext { intent -> Log.i("Connie", "ViewModel ++ intentsSubject hitCompose: ${intent.javaClass.name}") }
                 .compose(actionProcessor.combinedProcessor)
-                .scan(CurrencyViewState.IdleState, reducer)
+                .scan(CurrencyViewState.IDLE, reducer)
                 // Emit the last one event of the stream on subscription
                 // Useful when a View rebinds to the ViewModel after rotation.
                 .replay(1)
                 // Create the stream on creation without waiting for anyone to subscribe
                 // This allows the stream to stay alive even when the UI disconnects and
                 // match the stream's lifecycle to the ViewModel's one.
-                .autoConnect(0) // automatically connect
+//                .autoConnect(0) // automatically connect
 
-        compositeDisposable.add(observable.subscribe({ currencyViewState ->
-            Log.i("connie", "ViewModel ++ new currencyViewState onNext!")
-            liveViewState.value = currencyViewState
-        }, { err ->
-            Log.i("connie", "ViewModel ++ ERROR " + err.localizedMessage)
-        }))
+        compositeDisposable.add(
+                observable.subscribe({ currencyViewState ->
+                    Log.i("connie", "ViewModel ++ new currencyViewState posted: $currencyViewState")
+                    liveViewState.postValue(currencyViewState) // should be on main thread (if worker, use postValue)
+                }, { err ->
+                    Log.i("connie", "ViewModel ++ ERROR " + err.localizedMessage)
+                })
+        )
+
+        observable.autoConnect(0)
     }
 
     override fun processIntents(intents: Observable<out CurrencyIntent>) {
-       intents.subscribe(intentsSubject)
+        Log.i("connie", "ViewModel ++ process intents!")
+        intents.subscribe(intentsSubject)
     }
 
     override fun states(): LiveData<CurrencyViewState> {
@@ -120,6 +204,7 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
     }
 
     private fun actionFromIntent(intent: MviIntent) : CurrencyAction {
+        Log.i("connie", "actionFromIntent ${intent.javaClass.simpleName}")
         when(intent) {
             is CurrencyIntent.Initial -> return CurrencyAction.Seed.create()
             is CurrencyIntent.LoadCurrencies -> return CurrencyAction.LoadCurrencies.create()
@@ -130,24 +215,24 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
         throw IllegalArgumentException("do not know how to treat this intent " + intent)
     }
 
-    fun getAvailableExchange(currencyFrom: String, currencyTo: String): LiveData<AvailableExchange>? {
-//    liveAvailableExchange = MutableLiveData<AvailableExchange>()
-        val currencies = currencyFrom + "," + currencyTo
-        liveAvailableExchange = currencyRepository.getAvailableExchangeAsLiveData(currencies)
-        return liveAvailableExchange
-    }
-
-    fun loadCurrencyList(): LiveData<List<Currency>>? {
-//    if (liveCurrencyData == null) {
-//      liveCurrencyData = MutableLiveData<List<Currency>>()
-//      liveCurrencyData = currencyRepository.getCurrencyListAsLiveData()
+//    fun getAvailableExchange(currencyFrom: String, currencyTo: String): LiveData<AvailableExchange>? {
+////    liveAvailableExchange = MutableLiveData<AvailableExchange>()
+//        val currencies = currencyFrom + "," + currencyTo
+//        liveAvailableExchange = currencyRepository.getAvailableExchangeAsLiveData(currencies)
+//        return liveAvailableExchange
 //    }
-        return liveCurrencyData
-    }
+//
+//    fun loadCurrencyList(): LiveData<List<Currency>>? {
+////    if (liveCurrencyData == null) {
+////      liveCurrencyData = MutableLiveData<List<Currency>>()
+////      liveCurrencyData = currencyRepository.getCurrencyListAsLiveData()
+////    }
+//        return liveCurrencyData
+//    }
 
 //    fun initLocalCurrencies() { // TODO Load intent
 //        // seed room db if necessary
-//        val disposable = currencyRepository.getTotalCurrencies()
+//        val disposable = currencyRepository.getTotalCurrencyCounts()
 //                .subscribeOn(Schedulers.io())
 //                .observeOn(AndroidSchedulers.mainThread())
 //                .subscribe {
@@ -162,6 +247,7 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
 
     @OnLifecycleEvent(ON_DESTROY)
     fun unSubscribeViewModel() {
+        Log.i("connie", "ViewModel ++ unsubscribe, clear out disposables")
         // clear out repo subscriptions
         for (disposable in currencyRepository.allCompositeDisposable) {
             compositeDisposable.addAll(disposable)
@@ -171,26 +257,26 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
 
 //    private fun isRoomEmpty(currenciesTotal: Int) = currenciesTotal == 0
 
-    private fun populate() {
-        Completable.fromAction { currencyRepository.addCurrencies() }
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(object : CompletableObserver {
-                    override fun onSubscribe(@NonNull d: Disposable) {
-                        compositeDisposable.add(d)
-                    }
-
-                    override fun onComplete() {
-                        Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been Populated")
-
-                    }
-
-                    override fun onError(@NonNull e: Throwable) {
-                        e.printStackTrace()
-                        Log.e(CurrencyRepository::class.java.simpleName, "DataSource hasn't been Populated")
-                    }
-                })
-    }
+//    private fun populate() {
+//        Completable.fromAction { currencyRepository.addCurrencies() }
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(object : CompletableObserver {
+//                    override fun onSubscribe(@NonNull d: Disposable) {
+//                        compositeDisposable.add(d)
+//                    }
+//
+//                    override fun onComplete() {
+//                        Log.i(CurrencyRepository::class.java.simpleName, "DataSource has been Populated")
+//
+//                    }
+//
+//                    override fun onError(@NonNull e: Throwable) {
+//                        e.printStackTrace()
+//                        Log.e(CurrencyRepository::class.java.simpleName, "DataSource hasn't been Populated")
+//                    }
+//                })
+//    }
 
     override fun onCleared() {
         unSubscribeViewModel()

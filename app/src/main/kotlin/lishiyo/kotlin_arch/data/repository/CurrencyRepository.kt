@@ -16,9 +16,9 @@
 
 package lishiyo.kotlin_arch.data.repository
 
-import android.arch.lifecycle.LiveData
-import android.arch.lifecycle.MutableLiveData
+import android.util.Log
 import io.reactivex.Flowable
+import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
@@ -42,15 +42,19 @@ class CurrencyRepository @Inject constructor(
 
   val allCompositeDisposable: MutableList<Disposable> = arrayListOf()
 
-  override fun getTotalCurrencies() = roomCurrencyDataSource.currencyDao().getCurrenciesTotal()
+  // Stream of total currency counts
+  override fun getTotalCurrencyCounts(): Flowable<Int> = roomCurrencyDataSource.currencyDao().getCurrenciesTotal()
 
   override fun addCurrencies() {
     // populate with seed data
+    Log.i("connie", "CurrencyRepository ++ addCurrencies!")
     val currencyEntityList = RoomCurrencyDataSource.getAllCurrencies()
     roomCurrencyDataSource.currencyDao().insertAll(currencyEntityList)
   }
 
-  fun getCurrenciesLocal(): Flowable<List<Currency>> {
+  // Stream of currencies from database
+  override fun getAllCurrencies(): Flowable<List<Currency>> {
+    Log.i("connie", "CurrencyRepository ++ getAllCurrencies!")
     return roomCurrencyDataSource.currencyDao()
             .getAllCurrencies()
             .subscribeOn(Schedulers.io())
@@ -58,20 +62,30 @@ class CurrencyRepository @Inject constructor(
             .map { currencyList -> transform(currencyList) }
   }
 
-  override fun getCurrencyListAsLiveData(): LiveData<List<Currency>> {
-    val roomCurrencyDao = roomCurrencyDataSource.currencyDao()
-    val mutableLiveData = MutableLiveData<List<Currency>>()
-    val disposable = roomCurrencyDao.getAllCurrencies()
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe({ currencyList ->
-          // map the entities to domain models => trigger on viewmodel's liveCurrencyData
-          mutableLiveData.value = transform(currencyList)
-        }, { t: Throwable? -> t!!.printStackTrace() })
-    allCompositeDisposable.add(disposable)
+  // Hit api for the exchange rate
+  override fun getAvailableExchange(currencyString: String): Observable<AvailableExchange> {
+    Log.i("connie", "getAvailableExchange!")
 
-    return mutableLiveData
+    return remoteCurrencyDataSource.requestAvailableExchange(currencyString)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { currencyResponse -> transform(currencyResponse) }
   }
+
+//  override fun getCurrencyListAsLiveData(): LiveData<List<Currency>> {
+//    val roomCurrencyDao = roomCurrencyDataSource.currencyDao()
+//    val mutableLiveData = MutableLiveData<List<Currency>>()
+//    val disposable = roomCurrencyDao.getAllCurrencies()
+//        .subscribeOn(Schedulers.io())
+//        .observeOn(AndroidSchedulers.mainThread())
+//        .subscribe({ currencyList ->
+//          // map the entities to domain models => trigger on viewmodel's liveCurrencyData
+//          mutableLiveData.value = transform(currencyList)
+//        }, { t: Throwable? -> t!!.printStackTrace() })
+//    allCompositeDisposable.add(disposable)
+//
+//    return mutableLiveData
+//  }
 
   // Map currency entities from database into domain model currencies
   private fun transform(currencies: List<CurrencyEntity>): List<Currency> {
@@ -82,26 +96,28 @@ class CurrencyRepository @Inject constructor(
     return currencyList
   }
 
-  // currencies of the form "AED,USD"
-  override fun getAvailableExchangeAsLiveData(currencies: String): LiveData<AvailableExchange> {
-    val mutableLiveData = MutableLiveData<AvailableExchange>()
-    val disposable = remoteCurrencyDataSource.requestAvailableExchange(currencies)
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe({ currencyResponse ->
-          if (currencyResponse.isSuccess) {
-            mutableLiveData.value = transform(currencyResponse)
-          } else {
-            throw Throwable("CurrencyRepository -> on Error occurred")
-          }
-        }, { t: Throwable? -> t!!.printStackTrace() })
-    allCompositeDisposable.add(disposable)
-    return mutableLiveData
-  }
-
+  //
   // map CurrencyResponse to domain model
   private fun transform(exchangeMap: CurrencyResponse): AvailableExchange {
     return AvailableExchange(exchangeMap.currencyQuotes)
   }
+
+  // currencies of the form "AED,USD"
+//  override fun getAvailableExchangeAsLiveData(currencies: String): LiveData<AvailableExchange> {
+//    val mutableLiveData = MutableLiveData<AvailableExchange>()
+//    val disposable = remoteCurrencyDataSource.requestAvailableExchange(currencies)
+//        .subscribeOn(Schedulers.io())
+//        .observeOn(AndroidSchedulers.mainThread())
+//        .subscribe({ currencyResponse ->
+//          if (currencyResponse.isSuccess) {
+//            mutableLiveData.value = transform(currencyResponse)
+//          } else {
+//            throw Throwable("CurrencyRepository -> on Error occurred")
+//          }
+//        }, { t: Throwable? -> t!!.printStackTrace() })
+//    allCompositeDisposable.add(disposable)
+//    return mutableLiveData
+//  }
+
 
 }
