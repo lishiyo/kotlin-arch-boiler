@@ -53,10 +53,10 @@ sealed class CurrencyResult(var status: Status = Status.IDLE, var error: Throwab
             fun createSuccess(exchangeRate: Double, currencyFrom: String, currencyTo: String, quantity: Double) : Convert {
                 return Convert(Status.SUCCESS, exchangeRate, null, currencyFrom, currencyTo, quantity)
             }
-            fun createError(throwable: Throwable, currencyFrom: String, currencyTo: String, quantity: Double) : Convert {
+            fun createError(throwable: Throwable, currencyFrom: String?, currencyTo: String?, quantity: Double?) : Convert {
                 return Convert(Status.FAILURE, null, throwable, currencyFrom, currencyTo, quantity)
             }
-            fun createLoading(currencyFrom: String, currencyTo: String, quantity: Double) : Convert {
+            fun createLoading(currencyFrom: String?, currencyTo: String?, quantity: Double?) : Convert {
                 return Convert(Status.LOADING, null, null, currencyFrom, currencyTo, quantity)
             }
         }

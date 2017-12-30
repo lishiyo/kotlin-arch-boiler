@@ -19,5 +19,24 @@ package lishiyo.kotlin_arch.domain
 import java.io.Serializable
 
 // Domain model for the CurrencyRepository
-data class AvailableExchange(var availableExchangesMap: Map<String, Double>): Serializable
+data class AvailableExchange(var availableExchangesMap: Map<String, Double>): Serializable {
+
+    fun calculateExchangeResult(quantity: Double): Double? {
+        return calculateExchangeRate()?.times(quantity)
+    }
+
+    fun calculateExchangeRate(): Double? {
+        availableExchangesMap?.let {
+//            val exchangesKeys = availableExchangesMap.keys.toList()
+            val exchangesValues = availableExchangesMap.values.toList()
+
+            val fromCurrency = exchangesValues[0]
+            val toCurrency = exchangesValues[1]
+
+            val exchangeRate = toCurrency.div(fromCurrency)
+            return exchangeRate
+        }
+    }
+
+}
 

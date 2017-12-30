@@ -23,7 +23,6 @@ import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.BiFunction
-import io.reactivex.observables.ConnectableObservable
 import io.reactivex.subjects.PublishSubject
 import lishiyo.kotlin_arch.data.repository.CurrencyRepository
 import lishiyo.kotlin_arch.di.CurrencyApplication
@@ -163,7 +162,7 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
         initializeDagger()
 
         // create observable to push into states live data
-        val observable: ConnectableObservable<CurrencyViewState> = intentsSubject
+        val observable: Observable<CurrencyViewState> = intentsSubject
                 .subscribeOn(schedulerProvider.io())
                 .observeOn(schedulerProvider.ui())
                 .doOnSubscribe{ Log.i("connie", "subscribed!") }
@@ -180,7 +179,7 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
                 // Create the stream on creation without waiting for anyone to subscribe
                 // This allows the stream to stay alive even when the UI disconnects and
                 // match the stream's lifecycle to the ViewModel's one.
-//                .autoConnect(0) // automatically connect
+                .autoConnect(0) // automatically connect
 
         compositeDisposable.add(
                 observable.subscribe({ currencyViewState ->
@@ -190,8 +189,6 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
                     Log.i("connie", "ViewModel ++ ERROR " + err.localizedMessage)
                 })
         )
-
-        observable.autoConnect(0)
     }
 
     override fun processIntents(intents: Observable<out CurrencyIntent>) {
@@ -204,7 +201,6 @@ class CurrencyViewModel : ViewModel(), LifecycleObserver, MviViewModel<CurrencyI
     }
 
     private fun actionFromIntent(intent: MviIntent) : CurrencyAction {
-        Log.i("connie", "actionFromIntent ${intent.javaClass.simpleName}")
         when(intent) {
             is CurrencyIntent.Initial -> return CurrencyAction.Seed.create()
             is CurrencyIntent.LoadCurrencies -> return CurrencyAction.LoadCurrencies.create()

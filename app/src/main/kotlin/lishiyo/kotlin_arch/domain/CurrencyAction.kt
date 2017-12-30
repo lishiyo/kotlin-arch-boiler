@@ -3,6 +3,8 @@ package lishiyo.kotlin_arch.domain
 import lishiyo.kotlin_arch.mvibase.MviAction
 
 /**
+ * All the data required to perform an action.
+ *
  * Created by connieli on 12/26/17.
  */
 sealed class CurrencyAction : MviAction {
